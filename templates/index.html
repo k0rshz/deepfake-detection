@@ -62,8 +62,8 @@
 
                     <!-- Ползунок количества кадров и режим скорости (только для видео) -->
                     <div id="framesSliderSection" class="frames-slider-wrapper" style="display: none;">
-                        <label for="framesCount" class="frames-slider-label">Количество кадров для вывода: <span id="framesCountValue" class="frames-count-value">20</span></label>
-                        <input type="range" class="frames-slider" min="5" max="25" step="5" value="20" id="framesCount" name="frames_count">
+                        <label for="framesCount" class="frames-slider-label">Количество кадров для вывода: <span id="framesCountValue" class="frames-count-value">15</span></label>
+                        <input type="range" class="frames-slider" min="5" max="25" step="5" value="15" id="framesCount" name="frames_count">
                         
                         <div class="speed-mode-selector">
                             <label class="speed-mode-label speed-mode-fast" data-tooltip="Быстрая обработка: обрабатывается каждый 5-й кадр. Быстрее, но чуть менее точно.">
@@ -81,7 +81,7 @@
                 <!-- Форма загрузки по URL -->
                 <form id="uploadUrlForm" class="upload-form" style="display: none;">
                     <div class="mb-3">
-                        <label class="file-label" for="fileUrl">Введите URL изображения или видео:</label>
+                        <label class="file-label" for="fileUrl">Введите URL изображения:</label>
                         <div class="url-input-wrapper">
                             <input type="url" id="fileUrl" name="file_url" 
                                    placeholder="https://example.com/image.jpg" 
@@ -89,15 +89,11 @@
                             <button type="button" id="clearUrl" class="clear-url-btn" style="display: none;">✕</button>
                         </div>
                         <div id="urlInfo" class="file-info">URL не введен</div>
-                    </div>
-
-                    <div class="file-type-selector">
-                        <label>
-                            <input type="radio" name="file_type_url" value="image" checked> Изображение
-                        </label>
-                        <label>
-                            <input type="radio" name="file_type_url" value="video"> Видео
-                        </label>
+                        <!-- Превью файла по URL -->
+                        <div id="urlPreview" class="file-preview" style="display: none;">
+                            <img id="urlPreviewImage" src="" alt="Превью" style="display: none;">
+                            <button type="button" id="clearUrlPreview" class="clear-preview-btn">✕</button>
+                        </div>
                     </div>
 
                     <!-- Ползунок порога уверенности -->
@@ -107,21 +103,6 @@
                             <span class="threshold-help-icon" data-tooltip="Порог определяет вердикт: вероятность выше порога = Оригинал, ниже = Дипфейк">ℹ️</span>
                         </label>
                         <input type="range" class="threshold-slider" min="0.3" max="0.7" step="0.05" value="0.5" id="thresholdUrl" name="threshold_url">
-                    </div>
-
-                    <!-- Ползунок для видео и режим скорости -->
-                    <div id="framesSliderSectionUrl" class="frames-slider-wrapper" style="display: none;">
-                        <label for="framesCountUrl" class="frames-slider-label">Количество кадров для вывода: <span id="framesCountValueUrl" class="frames-count-value">20</span></label>
-                        <input type="range" class="frames-slider" min="5" max="25" step="5" value="20" id="framesCountUrl" name="frames_count_url">
-                        
-                        <div class="speed-mode-selector">
-                            <label class="speed-mode-label speed-mode-fast" data-tooltip="Быстрая обработка: обрабатывается каждый 5-й кадр. Быстрее, но менее точно.">
-                                <input type="radio" name="speed_mode_url" value="fast" checked> ⚡ Быстро
-                            </label>
-                            <label class="speed-mode-label speed-mode-precise" data-tooltip="Точная обработка: анализ всех кадров. Медленнее, но максимально точно.">
-                                <input type="radio" name="speed_mode_url" value="precise"> 🎯 Точно
-                            </label>
-                        </div>
                     </div>
 
                     <button type="submit">Анализировать по URL</button>

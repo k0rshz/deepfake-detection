@@ -60,38 +60,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // --- ЛОГИКА ДЛЯ ФОРМЫ URL ---
-    // Переключатель типа файла для URL
-    const imageRadioUrl = document.querySelector('input[name="file_type_url"][value="image"]');
-    const videoRadioUrl = document.querySelector('input[name="file_type_url"][value="video"]');
-    const imageLabelUrl = imageRadioUrl ? imageRadioUrl.parentElement : null;
-    const videoLabelUrl = videoRadioUrl ? videoRadioUrl.parentElement : null;
-    const framesSliderSectionUrl = document.getElementById('framesSliderSectionUrl');
-    const framesCountSliderUrl = document.getElementById('framesCountUrl');
-    const framesCountValueUrl = document.getElementById('framesCountValueUrl');
     const urlInput = document.getElementById('fileUrl');
     const urlInfo = document.getElementById('urlInfo');
     const clearUrlBtn = document.getElementById('clearUrl');
-
-    // Функция для обновления активной кнопки для URL формы
-    function updateActiveButtonUrl() {
-        if (!imageLabelUrl || !videoLabelUrl) return;
-        
-        imageLabelUrl.classList.remove('active-type-btn');
-        videoLabelUrl.classList.remove('active-type-btn');
-
-        if (imageRadioUrl && imageRadioUrl.checked) {
-            imageLabelUrl.classList.add('active-type-btn');
-        } else if (videoRadioUrl && videoRadioUrl.checked) {
-            videoLabelUrl.classList.add('active-type-btn');
-        }
-    }
-
-    // Обработчики для URL формы
-    if (imageRadioUrl && videoRadioUrl) {
-        imageRadioUrl.addEventListener('change', updateActiveButtonUrl);
-        videoRadioUrl.addEventListener('change', updateActiveButtonUrl);
-        updateActiveButtonUrl();
-    }
 
     // Управление ползунком порога для URL формы
     const thresholdSliderUrl = document.getElementById('thresholdUrl');
@@ -103,40 +74,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Управление ползунком кадров для URL формы
-    if (framesCountValueUrl && framesCountSliderUrl) {
-        framesCountValueUrl.textContent = framesCountSliderUrl.value;
-        framesCountSliderUrl.addEventListener('input', function() {
-            framesCountValueUrl.textContent = this.value;
-        });
-    }
-
-    function toggleFramesSliderUrl() {
-        if (framesSliderSectionUrl && videoRadioUrl) {
-            if (videoRadioUrl.checked) {
-                framesSliderSectionUrl.style.display = 'block';
-            } else {
-                framesSliderSectionUrl.style.display = 'none';
-            }
-        }
-    }
-
-    if (imageRadioUrl && videoRadioUrl) {
-        imageRadioUrl.addEventListener('change', toggleFramesSliderUrl);
-        videoRadioUrl.addEventListener('change', toggleFramesSliderUrl);
-        toggleFramesSliderUrl();
-    }
-
-    // Обработка ввода URL
+    // Обработка ввода URL с предпросмотром
     if (urlInput && urlInfo && clearUrlBtn) {
+        const urlPreview = document.getElementById('urlPreview');
+        const urlPreviewImage = document.getElementById('urlPreviewImage');
+        
         urlInput.addEventListener('input', function() {
             const url = this.value.trim();
             if (url) {
                 urlInfo.textContent = `URL: ${url.length > 50 ? url.substring(0, 50) + '...' : url}`;
                 clearUrlBtn.style.display = 'block';
+                
+                // Пытаемся загрузить предпросмотр
+                loadUrlPreview(url);
             } else {
                 urlInfo.textContent = 'URL не введен';
                 clearUrlBtn.style.display = 'none';
+                hideUrlPreview();
             }
         });
 
@@ -144,7 +98,52 @@ document.addEventListener('DOMContentLoaded', function() {
             urlInput.value = '';
             urlInfo.textContent = 'URL не введен';
             clearUrlBtn.style.display = 'none';
+            hideUrlPreview();
         });
+        
+        // Кнопка очистки превью URL
+        const clearUrlPreviewBtn = document.getElementById('clearUrlPreview');
+        if (clearUrlPreviewBtn) {
+            clearUrlPreviewBtn.addEventListener('click', function() {
+                hideUrlPreview();
+            });
+        }
+        
+        // Функция загрузки предпросмотра
+        function loadUrlPreview(url) {
+            // Проверяем, что это валидный URL
+            try {
+                new URL(url);
+            } catch (e) {
+                hideUrlPreview();
+                return;
+            }
+            
+            // Определяем тип по расширению (только изображения)
+            const urlLower = url.toLowerCase();
+            const isImage = urlLower.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i);
+            
+            if (isImage && urlPreview && urlPreviewImage) {
+                urlPreviewImage.src = url;
+                urlPreviewImage.style.display = 'block';
+                urlPreview.style.display = 'block';
+                
+                // Обработка ошибок загрузки
+                urlPreviewImage.onerror = function() {
+                    hideUrlPreview();
+                };
+            } else {
+                hideUrlPreview();
+            }
+        }
+        
+        function hideUrlPreview() {
+            if (urlPreview) urlPreview.style.display = 'none';
+            if (urlPreviewImage) {
+                urlPreviewImage.src = '';
+                urlPreviewImage.style.display = 'none';
+            }
+        }
     }
 
     // Управление ползунком порога уверенности
@@ -617,7 +616,7 @@ document.getElementById('uploadForm').addEventListener('submit', function(e) {
                             }
 
                             if (faceBlock.children.length > 0) {
-                                resultsDiv.insertBefore(faceBlock, faceDiv);
+                                resultsDiv.appendChild(faceBlock);
                             }
                             // ---
                         }
@@ -813,39 +812,15 @@ document.getElementById('uploadUrlForm').addEventListener('submit', function(e) 
         return;
     }
 
-    const fileTypeInputs = document.getElementsByName('file_type_url');
-    const framesCountInputUrl = document.getElementById('framesCountUrl');
     const thresholdInputUrl = document.getElementById('thresholdUrl');
-    const speedModeInputsUrl = document.getElementsByName('speed_mode_url');
-    
-    let selectedFileType = 'image';
-    for (const radio of fileTypeInputs) {
-        if (radio.checked) {
-            selectedFileType = radio.value;
-            break;
-        }
-    }
 
     const formData = new FormData();
     formData.append('url', url);
-    formData.append('file_type', selectedFileType);
+    formData.append('file_type', 'image'); // Только изображения по URL
     
     // Добавляем порог уверенности
     if (thresholdInputUrl) {
         formData.append('threshold', parseFloat(thresholdInputUrl.value));
-    }
-    
-    if (selectedFileType === 'video') {
-        if (framesCountInputUrl) {
-        formData.append('frames_count', framesCountInputUrl.value);
-        }
-        // Режим скорости
-        for (const radio of speedModeInputsUrl) {
-            if (radio.checked) {
-                formData.append('speed_mode', radio.value);
-                break;
-            }
-        }
     }
 
     const progressDiv = document.getElementById('progress');
@@ -862,14 +837,14 @@ document.getElementById('uploadUrlForm').addEventListener('submit', function(e) 
         clearResultsBtn.style.display = 'none';
     }
     
-    // Для видео просто показываем текст без прогресс-бара
-    if (selectedFileType === 'video') {
-        if (progressText) progressText.textContent = 'Обработка видео...';
-        if (progressBarContainer) progressBarContainer.style.display = 'none';
-    } else {
-        if (progressText) progressText.textContent = 'Анализируется...';
-        if (progressBarContainer) progressBarContainer.style.display = 'none';
+    // Скрыть превью URL при отправке
+    const urlPreview = document.getElementById('urlPreview');
+    if (urlPreview) {
+        urlPreview.style.display = 'none';
     }
+    
+    if (progressText) progressText.textContent = 'Анализируется...';
+    if (progressBarContainer) progressBarContainer.style.display = 'none';
 
     fetch('/upload-url', {
         method: 'POST',
@@ -891,7 +866,7 @@ document.getElementById('uploadUrlForm').addEventListener('submit', function(e) 
 
             // Используем ту же логику отображения результатов, что и для обычной загрузки
             if (data.result && data.result.annotated_image) {
-                // Результат для изображения - используем ту же функцию рендеринга
+                // Результат для изображения
                 const imgContainer = document.createElement('div');
                 imgContainer.className = 'result-item card';
 
@@ -906,23 +881,24 @@ document.getElementById('uploadUrlForm').addEventListener('submit', function(e) 
                 const img = document.createElement('img');
                 img.src = `/uploads/${encodeURIComponent(data.result.annotated_image)}`;
                 img.alt = 'Аннотированное изображение';
-                img.className = 'result-image card-img-top';
+                img.className = 'result-image card-img-top'; // Bootstrap class
                 cardBody.appendChild(img);
 
+                // Добавляем результаты для каждого лица
                 if (data.result.face_results && Array.isArray(data.result.face_results)) {
-                    const resultsDiv = document.createElement('div');
+                    const resultsDiv = document.createElement('div'); // Контейнер для результатов
                     data.result.face_results.forEach(faceRes => {
                         if (faceRes.error) {
-                            const errorDiv = document.createElement('div');
-                            errorDiv.className = 'result-text warning';
-                            errorDiv.innerHTML = `<strong>Ошибка:</strong> ${faceRes.error}`;
-                            resultsDiv.appendChild(errorDiv);
+                             const errorDiv = document.createElement('div');
+                             errorDiv.className = 'result-text warning'; // Используем warning для ошибок
+                             errorDiv.innerHTML = `<strong>Ошибка:</strong> ${faceRes.error}`;
+                             resultsDiv.appendChild(errorDiv);
                         } else {
                             const verdictClass = faceRes.prediction.includes('Оригинал') ? 'success' : 'danger';
                             const isOriginal = faceRes.prediction.includes('Оригинал');
                             const badgeIcon = isOriginal ? '✓' : '✗';
                             const badgeText = isOriginal ? 'Оригинал' : 'Дипфейк';
-                            
+
                             const faceDiv = document.createElement('div');
                             faceDiv.className = `result-text ${verdictClass}`;
                             faceDiv.innerHTML = `
@@ -931,16 +907,33 @@ document.getElementById('uploadUrlForm').addEventListener('submit', function(e) 
                             `;
                             resultsDiv.appendChild(faceDiv);
 
-                            // Теплокарта только для дипфейков (кнопка сверху)
-                            let heatmapContainer = null;
-                            let toggleBtn = null;
+                            // --- ВЕРТИКАЛЬНЫЙ БЛОК ДЛЯ КНОПКИ/ТЕПЛОКАРТЫ/КРОПА ---
+                            const faceBlock = document.createElement('div');
+                            faceBlock.className = 'face-block';
+
+                            // КРОП ЛИЦА (сначала кроп)
+                            if (faceRes.face_crop_image) {
+                                const faceCropImg = document.createElement('img');
+                                faceCropImg.src = `/uploads/${encodeURIComponent(faceRes.face_crop_image)}`;
+                                faceCropImg.alt = `Кроп лица ${faceRes.face_index}`;
+                                faceCropImg.className = 'face-crop-thumb';
+                                faceCropImg.style.cursor = 'pointer';
+                                faceCropImg.style.border = `3px solid ${faceRes.prediction.includes('Оригинал') ? 'green' : 'red'}`;
+                                faceCropImg.style.borderRadius = '5px';
+                                faceCropImg.addEventListener('click', function() {
+                                    openImageModal(faceCropImg.src, faceRes.prediction, faceRes.probability);
+                                });
+                                faceBlock.appendChild(faceCropImg);
+                            }
+
+                            // ТЕПЛОВАЯ КАРТА (только для дипфейков) — после кропа
                             if (!faceRes.prediction.includes('Оригинал') && faceRes.heatmap) {
-                                toggleBtn = document.createElement('button');
+                                const toggleBtn = document.createElement('button');
                                 toggleBtn.type = 'button';
                                 toggleBtn.className = 'heatmap-toggle-btn';
                                 toggleBtn.textContent = 'Показать теплокарту';
 
-                                heatmapContainer = document.createElement('div');
+                                const heatmapContainer = document.createElement('div');
                                 heatmapContainer.className = 'heatmap-container';
                                 heatmapContainer.style.display = 'none';
 
@@ -965,34 +958,22 @@ document.getElementById('uploadUrlForm').addEventListener('submit', function(e) 
                                     heatmapContainer.style.display = isHidden ? 'block' : 'none';
                                     toggleBtn.textContent = isHidden ? 'Скрыть теплокарту' : 'Показать теплокарту';
                                 });
+
+                                faceBlock.appendChild(toggleBtn);
+                                faceBlock.appendChild(heatmapContainer);
                             }
 
-                            // Кроп лица, кнопка сверху
-                            if (faceRes.face_crop_image) {
-                                const faceCropImg = document.createElement('img');
-                                faceCropImg.src = `/uploads/${encodeURIComponent(faceRes.face_crop_image)}`;
-                                faceCropImg.alt = `Кроп лица ${faceRes.face_index}`;
-                                faceCropImg.className = 'face-crop-thumb';
-                                faceCropImg.style.cursor = 'pointer';
-                                faceCropImg.style.border = `3px solid ${faceRes.prediction.includes('Оригинал') ? 'green' : 'red'}`;
-                                faceCropImg.style.borderRadius = '5px';
-                                
-                                faceCropImg.addEventListener('click', function() {
-                                    openImageModal(faceCropImg.src, faceRes.prediction, faceRes.probability);
-                                });
-
-                                if (toggleBtn && heatmapContainer) {
-                                    resultsDiv.insertBefore(toggleBtn, faceDiv);
-                                    resultsDiv.insertBefore(heatmapContainer, faceDiv);
-                                }
-                                resultsDiv.insertBefore(faceCropImg, faceDiv);
+                            if (faceBlock.children.length > 0) {
+                                resultsDiv.appendChild(faceBlock);
                             }
+                            // ---
                         }
                     });
                     cardBody.appendChild(resultsDiv);
                 }
                 imgContainer.appendChild(cardBody);
                 resultDiv.appendChild(imgContainer);
+
 
             } else if (data.result_video && data.result_video.annotated_video) {
                 // Результат для видео - используем ту же функцию рендеринга

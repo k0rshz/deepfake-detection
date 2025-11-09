@@ -735,9 +735,12 @@ async def download_file_from_url(url: str, max_size: int = 100 * 1024 * 1024) ->
     
     # Определяем расширение файла из URL
     file_ext = os.path.splitext(parsed.path)[1]
+    # Убираем query параметры из расширения
+    if '?' in file_ext:
+        file_ext = file_ext.split('?')[0]
     if not file_ext:
-        # Пытаемся определить по content-type
-        file_ext = '.jpg'  # По умолчанию
+        # Пытаемся определить по content-type позже
+        file_ext = '.jpg'  # По умолчанию для изображений
     
     # Генерируем уникальное имя файла
     unique_filename = f"{uuid.uuid4().hex}{file_ext}"
@@ -753,19 +756,40 @@ async def download_file_from_url(url: str, max_size: int = 100 * 1024 * 1024) ->
                 
                 # Получаем content-type
                 content_type = response.headers.get('content-type', '')
+                content_type_lower = content_type.lower() if content_type else ''
                 
-                # Проверяем тип контента
-                allowed_types = {"image/jpeg", "image/jpg", "image/png", "video/mp4", "video/avi", "video/mov", "video/quicktime", "image/webp"}
-                if content_type and not any(allowed_type in content_type.lower() for allowed_type in allowed_types):
-                    # Если content-type не подходит, проверяем по расширению
-                    ext_lower = file_ext.lower()
-                    if ext_lower not in ['.jpg', '.jpeg', '.png', '.mp4', '.avi', '.mov', '.webp']:
-                        raise HTTPException(status_code=400, detail="Неподдерживаемый тип файла. Поддерживаются: JPEG, PNG, MP4, AVI, MOV")
+                # Блокируем HTML контент
+                if 'text/html' in content_type_lower or 'application/xhtml' in content_type_lower:
+                    raise HTTPException(status_code=400, 
+                                     detail="URL ведет на HTML страницу, а не на файл. Пожалуйста, используйте прямую ссылку на файл (например: https://example.com/video.mp4)")
                 
-                # Сохраняем файл с проверкой размера
+                # Проверяем тип контента (более гибкая проверка для видео)
+                allowed_image_types = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
+                allowed_video_types = {"video/mp4", "video/avi", "video/mov", "video/quicktime", "video/x-msvideo", "video/x-matroska", "application/octet-stream"}
+                allowed_types = allowed_image_types | allowed_video_types
+                
+                # Если content-type не подходит, проверяем по расширению
+                ext_lower = file_ext.lower()
+                is_valid_extension = ext_lower in ['.jpg', '.jpeg', '.png', '.mp4', '.avi', '.mov', '.webp', '.mkv']
+                
+                if content_type:
+                    # Проверяем, содержит ли content-type один из разрешенных типов
+                    is_valid_content_type = any(allowed_type in content_type_lower for allowed_type in allowed_types)
+                    
+                    if not is_valid_content_type and not is_valid_extension:
+                        raise HTTPException(status_code=400, detail=f"Неподдерживаемый тип файла. Content-Type: {content_type}. Поддерживаются: JPEG, PNG, MP4, AVI, MOV. Убедитесь, что URL ведет на файл, а не на HTML страницу.")
+                elif not is_valid_extension:
+                    raise HTTPException(status_code=400, detail="Неподдерживаемый тип файла. Поддерживаются: JPEG, PNG, MP4, AVI, MOV")
+                
+                # Сохраняем файл с проверкой размера и первых байтов
                 file_size = 0
+                first_chunk = None
                 with open(filepath, "wb") as f:
+                    chunk_count = 0
                     async for chunk in response.aiter_bytes(chunk_size=1024 * 1024):  # Читаем по 1 МБ
+                        if chunk_count == 0:
+                            first_chunk = chunk[:512]  # Сохраняем первые 512 байт для проверки
+                        
                         file_size += len(chunk)
                         if file_size > max_size:
                             f.close()
@@ -774,6 +798,41 @@ async def download_file_from_url(url: str, max_size: int = 100 * 1024 * 1024) ->
                             raise HTTPException(status_code=400, 
                                              detail=f"Файл слишком большой. Максимальный размер: 100 МБ. Размер файла: {file_size / (1024 * 1024):.2f} МБ")
                         f.write(chunk)
+                        chunk_count += 1
+                
+                # Проверяем первые байты файла (magic bytes) для определения реального типа
+                if first_chunk:
+                    first_bytes = first_chunk[:12]
+                    first_bytes_str = first_bytes.decode('utf-8', errors='ignore').lower()
+                    
+                    # Проверяем, не является ли это HTML
+                    if first_bytes_str.startswith('<!doctype') or first_bytes_str.startswith('<html') or '<script' in first_bytes_str or '<body' in first_bytes_str:
+                        if os.path.exists(filepath):
+                            os.remove(filepath)
+                        raise HTTPException(status_code=400, 
+                                         detail="Загруженный файл является HTML страницей, а не изображением или видео. Пожалуйста, используйте прямую ссылку на файл (например: https://example.com/video.mp4)")
+                    
+                    # Проверяем magic bytes для изображений
+                    is_jpeg = first_bytes[:3] == b'\xff\xd8\xff'
+                    is_png = first_bytes[:8] == b'\x89PNG\r\n\x1a\n'
+                    is_webp = first_bytes[:4] == b'RIFF' and first_bytes[8:12] == b'WEBP'
+                    
+                    # Проверяем magic bytes для видео
+                    # MP4/MOV начинаются с ftyp на позиции 4
+                    is_mp4 = len(first_bytes) >= 8 and first_bytes[4:8] == b'ftyp'
+                    # AVI начинается с RIFF и содержит AVI на позиции 8
+                    is_avi = len(first_bytes) >= 12 and first_bytes[:4] == b'RIFF' and first_bytes[8:12] == b'AVI '
+                    # MOV может быть как ftyp, так и иметь другие маркеры
+                    is_mov = is_mp4 or (len(first_bytes) >= 8 and first_bytes[4:8] == b'qt  ')
+                    
+                    # Если это не валидный файл изображения/видео
+                    is_valid_file = is_jpeg or is_png or is_webp or is_mp4 or is_avi or is_mov
+                    
+                    if not is_valid_file and file_size < 1024:  # Если файл маленький и не валидный
+                        if os.path.exists(filepath):
+                            os.remove(filepath)
+                        raise HTTPException(status_code=400, 
+                                         detail="Загруженный файл не является валидным изображением или видео. Возможно, URL ведет на HTML страницу. Используйте прямую ссылку на файл.")
         
         logger.info(f"Файл успешно загружен по URL: {url} -> {filepath}")
         return filepath, content_type
