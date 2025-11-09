@@ -1,3 +1,4 @@
+# AI Challenge 2025
 # Deepfake Detection Web Application
 
 Веб-приложение для детекции дипфейков на изображениях и видео с использованием Vision Transformer (ViT).
