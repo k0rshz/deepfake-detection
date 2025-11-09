@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+torch
+torchvision
+timm
+opencv-python
+albumentations
+numpy
+pandas
+matplotlib
+mediapipe
+Pillow
+python-multipart
+jinja2
+pytorch-lightning
+torchmetrics
+httpx

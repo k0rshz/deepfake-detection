@@ -1,0 +1,182 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deepfake Detector</title>
+    <!-- Подключаем наш собственный CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="main-content">
+            <h1>Deepfake Detector</h1>
+
+            <div class="upload-section">
+                <!-- Переключатель способа загрузки -->
+                <div class="upload-method-selector">
+                    <button type="button" class="upload-method-btn active" data-method="file">📁 Загрузка файла</button>
+                    <button type="button" class="upload-method-btn" data-method="url">🔗 Загрузка по URL</button>
+                </div>
+
+                <!-- Форма загрузки файла -->
+                <form id="uploadForm" enctype="multipart/form-data" class="upload-form active">
+                    <div class="mb-3">
+                        <!-- Стилизованная метка -->
+                        <label class="file-label" for="file">Выберите изображение или видео:</label>
+                        <!-- Область перетаскивания -->
+                        <div class="drop-zone">
+                            <p>Перетащите файл сюда или нажмите</p>
+                            <div class="file-input-wrapper">
+                                Выберите файл
+                                <input type="file" id="file" name="file" accept="image/*,video/*" required>
+                            </div>
+                        </div>
+                        <div id="fileInfo" class="file-info">Файл не выбран</div>
+                        <!-- Превью файла -->
+                        <div id="filePreview" class="file-preview" style="display: none;">
+                            <img id="previewImage" src="" alt="Превью" style="display: none;">
+                            <video id="previewVideo" src="" controls style="display: none;"></video>
+                            <button type="button" id="clearPreview" class="clear-preview-btn">✕</button>
+                        </div>
+                    </div>
+
+                    <div class="file-type-selector">
+                        <label>
+                            <input type="radio" name="file_type" value="image" checked> Изображение
+                        </label>
+                        <label>
+                            <input type="radio" name="file_type" value="video"> Видео
+                        </label>
+                    </div>
+
+                    <!-- Ползунок порога уверенности -->
+                    <div class="threshold-slider-wrapper">
+                        <label for="threshold" class="threshold-slider-label">
+                            Порог уверенности: <span id="thresholdValue" class="threshold-value">0.50</span>
+                            <span class="threshold-help-icon" data-tooltip="Порог определяет вердикт: вероятность выше порога = Оригинал, ниже = Дипфейк">ℹ️</span>
+                        </label>
+                        <input type="range" class="threshold-slider" min="0.3" max="0.7" step="0.05" value="0.5" id="threshold" name="threshold">
+                    </div>
+
+                    <!-- Ползунок количества кадров и режим скорости (только для видео) -->
+                    <div id="framesSliderSection" class="frames-slider-wrapper" style="display: none;">
+                        <label for="framesCount" class="frames-slider-label">Количество кадров для вывода: <span id="framesCountValue" class="frames-count-value">20</span></label>
+                        <input type="range" class="frames-slider" min="5" max="25" step="5" value="20" id="framesCount" name="frames_count">
+                        
+                        <div class="speed-mode-selector">
+                            <label class="speed-mode-label speed-mode-fast" data-tooltip="Быстрая обработка: обрабатывается каждый 5-й кадр. Быстрее, но чуть менее точно.">
+                                <input type="radio" name="speed_mode" value="fast" checked> ⚡ Быстро
+                            </label>
+                            <label class="speed-mode-label speed-mode-precise" data-tooltip="Точная обработка: анализ всех кадров. Медленнее, но более точно (особенно для коротких видео).">
+                                <input type="radio" name="speed_mode" value="precise"> 🎯 Точно
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit">Анализировать</button>
+                </form>
+
+                <!-- Форма загрузки по URL -->
+                <form id="uploadUrlForm" class="upload-form" style="display: none;">
+                    <div class="mb-3">
+                        <label class="file-label" for="fileUrl">Введите URL изображения или видео:</label>
+                        <div class="url-input-wrapper">
+                            <input type="url" id="fileUrl" name="file_url" 
+                                   placeholder="https://example.com/image.jpg" 
+                                   class="url-input" required>
+                            <button type="button" id="clearUrl" class="clear-url-btn" style="display: none;">✕</button>
+                        </div>
+                        <div id="urlInfo" class="file-info">URL не введен</div>
+                    </div>
+
+                    <div class="file-type-selector">
+                        <label>
+                            <input type="radio" name="file_type_url" value="image" checked> Изображение
+                        </label>
+                        <label>
+                            <input type="radio" name="file_type_url" value="video"> Видео
+                        </label>
+                    </div>
+
+                    <!-- Ползунок порога уверенности -->
+                    <div class="threshold-slider-wrapper">
+                        <label for="thresholdUrl" class="threshold-slider-label">
+                            Порог уверенности: <span id="thresholdValueUrl" class="threshold-value">0.50</span>
+                            <span class="threshold-help-icon" data-tooltip="Порог определяет вердикт: вероятность выше порога = Оригинал, ниже = Дипфейк">ℹ️</span>
+                        </label>
+                        <input type="range" class="threshold-slider" min="0.3" max="0.7" step="0.05" value="0.5" id="thresholdUrl" name="threshold_url">
+                    </div>
+
+                    <!-- Ползунок для видео и режим скорости -->
+                    <div id="framesSliderSectionUrl" class="frames-slider-wrapper" style="display: none;">
+                        <label for="framesCountUrl" class="frames-slider-label">Количество кадров для вывода: <span id="framesCountValueUrl" class="frames-count-value">20</span></label>
+                        <input type="range" class="frames-slider" min="5" max="25" step="5" value="20" id="framesCountUrl" name="frames_count_url">
+                        
+                        <div class="speed-mode-selector">
+                            <label class="speed-mode-label speed-mode-fast" data-tooltip="Быстрая обработка: обрабатывается каждый 5-й кадр. Быстрее, но менее точно.">
+                                <input type="radio" name="speed_mode_url" value="fast" checked> ⚡ Быстро
+                            </label>
+                            <label class="speed-mode-label speed-mode-precise" data-tooltip="Точная обработка: анализ всех кадров. Медленнее, но максимально точно.">
+                                <input type="radio" name="speed_mode_url" value="precise"> 🎯 Точно
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit">Анализировать по URL</button>
+                </form>
+            </div>
+
+            <!-- Информационная панель -->
+            <div class="info-panel">
+                <div class="info-panel-header">
+                    <span class="info-icon">ℹ️</span>
+                    <span class="info-title">Как это работает?</span>
+                    <button type="button" class="info-toggle" id="infoToggle">▼</button>
+                </div>
+                <div class="info-panel-content" id="infoContent" style="display: none;">
+                    <ul>
+                        <li>Загрузите изображение или видео с лицами (файл или по URL)</li>
+                        <li>Модель автоматически обнаружит лица и проанализирует их</li>
+                        <li>Результат покажет, является ли лицо оригиналом или дипфейком</li>
+                        <li>Порог уверенности: настройте чувствительность детекции</li>
+                        <li>Для видео: выберите количество кадров (5-25) и режим обработки</li>
+                        <li>Режимы: ⚡ Быстро (каждый 5-й кадр) или 🎯 Точно (все кадры)</li>
+                        <li>Теплокарты: показываются только для дипфейков, визуализируют области внимания модели</li>
+                        <li>Поддерживаемые форматы: JPEG, PNG, MP4, AVI, MOV</li>
+                        <li>Максимальный размер файла: 100 МБ</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="progress">
+                <span class="progress-text" id="progressText">Анализируется...</span>
+                <div class="spinner"></div>
+                <div id="progressBarContainer" class="progress-bar-container" style="display: none;">
+                    <div id="progressBar" class="progress-bar"></div>
+                </div>
+            </div>
+
+            <div id="result"></div>
+            
+            <!-- Кнопка очистки результатов -->
+            <button type="button" id="clearResults" class="clear-results-btn" style="display: none;">
+                🗑️ Очистить результаты
+            </button>
+        </div>
+    </div>
+
+    <!-- Модальное окно для просмотра изображений -->
+    <div id="imageModal" class="image-modal" style="display: none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">✕</button>
+            <img id="modalImage" src="" alt="Увеличенное изображение">
+            <div class="modal-info" id="modalInfo"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

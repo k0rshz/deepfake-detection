@@ -1,0 +1,46 @@
+# Python
+# ... existing code ...
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.log
+
+# Virtual environments
+# ... existing code ...
+venv/
+.env/
+.venv/
+
+# OS/IDE
+# ... existing code ...
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Build/Dist
+# ... existing code ...
+build/
+dist/
+.eggs/
+
+# Data and outputs
+# ... existing code ...
+static/uploads/
+
+# Jupyter
+# ... existing code ...
+.ipynb_checkpoints/
+
+# Caches
+# ... existing code ...
+.cache/
+.mypy_cache/
+.pytest_cache/
+
+# Node (if added later)
+# ... existing code ...
+node_modules/
