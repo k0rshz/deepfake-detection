@@ -35,20 +35,20 @@
 
 ### Вариант 2: Для разработчиков (Git)
 
-Убедитесь, что установлен Git LFS (это нужно для загрузки весов моделей):  
+#### Убедитесь, что установлен Git LFS (это нужно для загрузки весов моделей):  
 
 ```bash
 git lfs install
 ```
 
-Клонируйте репозиторий:  
+#### Клонируйте репозиторий:  
 
 ```bash
 git clone https://github.com/k0rshz/deepfake-detection.git
 cd deepfake_detection
 ```
 
-### Создание виртуального окружения
+#### Создание виртуального окружения
 
 **Windows:**
 ```bash
@@ -62,17 +62,17 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-### Установка зависимостей
+#### Установка зависимостей
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Подготовка модели
+#### Подготовка модели
 
 Убедитесь, что файл модели `models/best_model.pth` находится в папке `models/`. 
 
-### Запуск приложения
+#### Запуск приложения
 
 ```bash
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
@@ -83,7 +83,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Открытие в браузере
+#### Открытие в браузере
 
 Откройте браузер и перейдите по адресу:
 ```
